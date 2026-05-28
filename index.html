@@ -309,10 +309,17 @@ async function api(body){
 async function refreshAll(){
   setSyncState('syncing','Loading…');
   try {
-    const [eRes] = await Promise.all([
-      fetch(SCRIPT_URL+'?action=getEntries').then(r=>r.json()),
-    ]);
-    if(eRes.entries) entries = eRes.entries.map(normalizeEntry);
+    const eRes = await fetch(SCRIPT_URL+'?action=getEntries').then(r=>r.json());
+    if(eRes.error) throw new Error(eRes.error);
+    if(eRes.entries){
+      // Debug: log first entry raw keys from Sheets
+      if(eRes.entries.length>0){
+        console.log('Raw keys from Sheets:', Object.keys(eRes.entries[0]));
+        console.log('Sample entry:', eRes.entries[0]);
+      }
+      entries = eRes.entries.map(normalizeEntry);
+    }
+    renderContracts();
     renderCosts();
     renderDashboard();
     populateFilters();
