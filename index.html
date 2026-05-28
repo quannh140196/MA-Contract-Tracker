@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MA Contract Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --navy:#0b1a2e;--navy2:#122040;--blue:#1565c0;--blue2:#1e88e5;
+  --bg:#f0f3f8;--white:#fff;--gray:#f4f6fa;--border:#dde3ee;--border2:#c8d1e5;
+  --text:#0b1a2e;--text2:#3d5068;--muted:#8898aa;
+  --green:#059669;--red:#dc2626;--amber:#f59e0b;
+  --ff:'Inter',sans-serif;
+  --r:8px;--r2:12px;
+  --sh:0 1px 4px rgba(11,26,46,.07),0 4px 16px rgba(11,26,46,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--ff);font-size:13px;min-height:100vh}
+
+/* TOPBAR */
+.top{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:54px;background:var(--navy);position:sticky;top:0;z-index:100;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:14px}
+.brand-icon{width:30px;height:30px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.top-right{display:flex;align-items:center;gap:8px}
+.sync-pill{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7)}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3)}
+.sync-pill.synced .sync-dot{background:#4ade80}
+.sync-pill.syncing .sync-dot{background:#fbbf24;animation:pulse .8s infinite}
+.sync-pill.error .sync-dot{background:#f87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+button{cursor:pointer;font-family:var(--ff);border:none;border-radius:var(--r);font-weight:600;font-size:12px;transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.btn-top{padding:5px 12px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.2)}
+.btn-top:hover{background:rgba(255,255,255,.2)}
+.btn-primary{padding:6px 14px;background:var(--blue);color:#fff;border:1px solid transparent}
+.btn-primary:hover{background:#1254a8}
+.btn-ghost{padding:5px 12px;background:var(--gray);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-danger{padding:4px 8px;background:#fef2f2;color:var(--red);border:1px solid #fecaca;font-size:11px}
+.btn-danger:hover{background:#fee2e2}
+
+/* TABS */
+.tabs{display:flex;background:var(--navy2);padding:0 20px;border-bottom:1px solid rgba(255,255,255,.1)}
+.tab{padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.tab.active{color:#fff;border-bottom-color:var(--blue2)}
+.tab:hover:not(.active){color:rgba(255,255,255,.8)}
+
+/* CONTENT */
+.content{padding:16px 20px}
+.page{display:none}
+.page.active{display:block}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.toolbar-left{display:flex;align-items:center;gap:8px}
+.toolbar-right{display:flex;align-items:center;gap:8px}
+.search{padding:6px 12px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--ff);font-size:12px;background:#fff;width:200px;outline:none}
+.search:focus{border-color:var(--blue)}
+
+/* SPREADSHEET TABLE */
+.sheet-wrap{background:#fff;border-radius:var(--r2);box-shadow:var(--sh);overflow:auto;border:1px solid var(--border);max-height:calc(100vh - 160px);cursor:grab}
+.sheet-wrap.dragging{cursor:grabbing;user-select:none}
+.sheet{border-collapse:collapse;width:100%;min-width:max-content}
+.sheet th{background:var(--navy);color:rgba(255,255,255,.75);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;white-space:nowrap;border-right:1px solid rgba(255,255,255,.08);text-align:left;position:sticky;top:0;z-index:10;user-select:none}
+.sheet th:first-child{width:36px;text-align:center;position:sticky;left:0;z-index:11;background:var(--navy)}
+.sheet td{border-bottom:1px solid var(--border);border-right:1px solid #f0f2f8;padding:0;vertical-align:middle;font-size:12px}
+.sheet td:first-child{background:var(--gray);text-align:center;color:var(--muted);font-size:11px;font-weight:600;width:36px;border-right:1px solid var(--border);position:sticky;left:0;z-index:1}
+.sheet tr:hover td{background:#f8faff}
+.sheet tr:hover td:first-child{background:var(--gray)}
+
+/* CELL EDITING */
+.cell{padding:6px 10px;min-height:32px;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.cell:focus{outline:2px solid var(--blue);outline-offset:-2px;background:#fff!important;white-space:normal;overflow:visible;z-index:5;position:relative}
+.cell.num{text-align:right;font-variant-numeric:tabular-nums}
+.cell.muted{color:var(--muted)}
+.cell-select{width:100%;padding:6px 10px;border:none;background:transparent;font-family:var(--ff);font-size:12px;cursor:pointer;color:var(--text);outline:none}
+.cell-select:focus{outline:2px solid var(--blue)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.badge-active{background:#d1fae5;color:#065f46}
+.badge-expired{background:#fee2e2;color:#991b1b}
+.badge-pending{background:#fef3c7;color:#92400e}
+.badge-terminated{background:#ede9fe;color:#5b21b6}
+
+/* AUTOCOMPLETE */
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);z-index:200;max-height:180px;overflow-y:auto;display:none}
+.ac-list.open{display:block}
+.ac-item{padding:6px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.selected{background:var(--gray);color:var(--blue)}
+
+/* NEW ROW */
+.new-row td{background:#f8faff}
+.add-row-btn{width:100%;padding:8px;text-align:center;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;border-top:1px solid var(--border)}
+.date-input{width:100%;height:32px;padding:3px 8px;border:none;background:transparent;font-family:var(--ff);font-size:12px;color:var(--text);outline:none;cursor:pointer;box-sizing:border-box}
+.date-input:focus{background:#fff;outline:2px solid var(--blue);outline-offset:-2px;border-radius:0}
+.add-row-btn:hover{background:var(--gray)}
+
+/* DASHBOARD */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:var(--r2);padding:16px;box-shadow:var(--sh);border-top:3px solid var(--blue)}
+.kpi.green{border-top-color:var(--green)}
+.kpi.amber{border-top-color:var(--amber)}
+.kpi.red{border-top-color:var(--red)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.kpi-val{font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-.5px;line-height:1}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+.dash-table-wrap{background:#fff;border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden;border:1px solid var(--border)}
+.dash-table{width:100%;border-collapse:collapse}
+.dash-table th{background:var(--navy);color:rgba(255,255,255,.7);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left}
+.dash-table th:not(:first-child){text-align:right}
+.dash-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.dash-table td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.dash-table tr:last-child td{border-bottom:none}
+.dash-table tfoot td{background:var(--navy2);color:#fff;font-weight:700}
+.prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:3px;min-width:60px}
+.prog-fill{height:100%;border-radius:3px;transition:.4s}
+
+.month-sel{padding:6px 12px;border:1.5px solid var(--blue);border-radius:var(--r);font-family:var(--ff);font-size:13px;font-weight:700;color:var(--navy);background:var(--gray);outline:none;cursor:pointer}
+.section-hdr{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.section-hdr::before{content:'';display:block;width:3px;height:14px;background:var(--blue);border-radius:2px}
+
+/* TOAST */
+.toasts{position:fixed;bottom:16px;right:16px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.toast{padding:10px 16px;border-radius:var(--r);font-size:12px;font-weight:600;transform:translateX(120%);opacity:0;transition:.3s;pointer-events:none;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);max-width:280px}
+.toast.show{transform:none;opacity:1}
+.toast.success{border-color:#6ee7b7;color:#065f46}
+.toast.error{border-color:#fca5a5;color:#991b1b}
+.toast.info{border-color:#93c5fd;color:#1e40af}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOP BAR -->
+<div class="top">
+  <div class="brand">
+    <div class="brand-icon">📋</div>
+    MA CONTRACT TRACKER
+  </div>
+  <div class="top-right">
+    <div class="sync-pill" id="syncPill">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncTxt">Not connected</span>
+    </div>
+    <button class="btn-top" onclick="refreshAll()">↻ Refresh</button>
+    <button class="btn-top" onclick="exportCSV()">⬇ CSV</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('contracts',this)">📋 Contracts</div>
+  <div class="tab" onclick="showTab('costs',this)">💰 Cost Entries</div>
+  <div class="tab" onclick="showTab('dashboard',this)">📊 Dashboard</div>
+</div>
+
+<!-- PAGES -->
+<div class="content">
+
+<!-- ══════════════════ COSTS PAGE ══════════════════ -->
+<div class="page" id="page-costs">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input class="search" id="costSearch" placeholder="🔍 Search..." oninput="renderCosts()">
+      <select class="search" style="width:auto" id="costCatFilter" onchange="renderCosts()">
+        <option value="">All categories</option>
+      </select>
+      <button class="btn-ghost" onclick="clearCostFilter()">✕ Clear</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-ghost" onclick="exportCostExcel()">📊 Export Excel</button>
+      <button class="btn-primary" onclick="addCostRow()">+ Add Row</button>
+    </div>
+  </div>
+  <div class="sheet-wrap">
+    <table class="sheet" id="costTable">
+      <thead><tr>
+        <th>#</th>
+        <th style="min-width:110px">Date</th>
+        <th style="min-width:200px">PO / Contract</th>
+        <th style="min-width:160px">Category</th>
+        <th style="min-width:140px">Used (amount)</th>
+        <th style="min-width:80px">Currency</th>
+        <th style="min-width:110px">Ex. Rate</th>
+        <th style="min-width:140px">Used (VND)</th>
+        <th style="min-width:180px">Notes / Vendor</th>
+        <th style="min-width:60px"></th>
+      </tr></thead>
+      <tbody id="costBody"></tbody>
+    </table>
+    <button class="add-row-btn" onclick="addCostRow()">+ Add row</button>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+    💡 Click to edit · Tab to move · Enter to save · Ctrl+Enter new row · 🖱 Drag table to scroll right
+  </div>
+</div>
+
+<!-- ══════════════════ CONTRACTS PAGE ══════════════════ -->
+<div class="page active" id="page-contracts">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input class="search" id="conSearch" placeholder="🔍 Search PO..." oninput="renderContracts()">
+      <select class="search" style="width:auto" id="conStatusFilter" onchange="renderContracts()">
+        <option value="">All status</option>
+        <option>Active</option><option>Pending</option><option>Expired</option><option>Terminated</option>
+      </select>
+      <button class="btn-ghost" onclick="clearConFilter()">✕ Clear</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-ghost" onclick="exportContractExcel()">📊 Export Excel</button>
+      <button class="btn-primary" onclick="addContractRow()">+ Add Contract</button>
+    </div>
+  </div>
+  <div class="sheet-wrap">
+    <table class="sheet" id="conTable">
+      <thead id="conThead"></thead>
+      <tbody id="conBody"></tbody>
+    </table>
+    <button class="add-row-btn" onclick="addContractRow()">+ Add contract</button>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+    💡 Click any cell to edit · Budget columns: Y1=Year 1, Y2=Year 2, Y3=Year 3 of contract
+  </div>
+</div>
+
+<!-- ══════════════════ DASHBOARD PAGE ══════════════════ -->
+<div class="page" id="page-dashboard">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="section-hdr" style="margin:0">Month</div>
+      <select class="month-sel" id="dashMonth" onchange="renderDashboard()"></select>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-ghost" onclick="exportDashPNG()">🖼 Export PNG</button>
+      <button class="btn-ghost" onclick="exportDashExcel()">📊 Export Excel</button>
+      <button class="btn-ghost" onclick="sendMonthlyEmail()">📧 Send Report</button>
+    </div>
+  </div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="section-hdr">Budget vs. Used by Category</div>
+  <div class="dash-table-wrap">
+    <table class="dash-table">
+      <thead><tr>
+        <th>Category</th>
+        <th>Monthly Budget</th>
+        <th>Used This Month</th>
+        <th>Remaining</th>
+        <th style="min-width:100px">Usage</th>
+      </tr></thead>
+      <tbody id="dashBody"></tbody>
+      <tfoot><tr id="dashFoot"></tr></tfoot>
+    </table>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<div class="toasts" id="toasts"></div>
+
+<!-- CONTRACT EDIT MODAL -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;overflow-y:auto;padding:24px 16px">
+  <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:var(--r2);box-shadow:0 8px 40px rgba(0,0,0,.2);overflow:hidden">
+    <div style="background:var(--navy);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+      <div style="color:#fff;font-weight:700;font-size:15px">✏ Edit Contract</div>
+      <button onclick="closeEditModal()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px" id="editModalBody"></div>
+    <div style="padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
+      <button class="btn-ghost" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveEditContract()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzegF2fyfssgec0QyaC_dtliTPa1X6jA87xP0_3SSab0FX-sKCkSW4clarPH-72kTXH/exec';
+const CATS = ['L1','L2','Spare Part','Spare Part Replenishment','Logistic','Outsource'];
+const STATUSES = ['Active','Pending','Expired','Terminated'];
+
+let entries = [];
+let contracts = [];
+let dirty = {};  // track unsaved changes by ID
+
+// ── SYNC STATE ─────────────────────────────────────────────
+function setSyncState(state, txt){
+  const pill=document.getElementById('syncPill');
+  pill.className='sync-pill '+state;
+  document.getElementById('syncTxt').textContent=txt;
+}
+
+// ── API CALLS ──────────────────────────────────────────────
+async function api(body){
+  // Use GET + URL params — avoids CORS preflight/redirect issues with Apps Script
+  const url = SCRIPT_URL + '?data=' + encodeURIComponent(JSON.stringify(body));
+  const r = await fetch(url);
+  const text = await r.text();
+  try {
+    const d = JSON.parse(text);
+    if(d.error) throw new Error(d.error);
+    return d;
+  } catch(e) {
+    throw new Error('Invalid response from server');
+  }
+}
+
+async function refreshAll(){
+  setSyncState('syncing','Loading…');
+  try {
+    const eRes = await fetch(SCRIPT_URL+'?action=getEntries').then(r=>r.json());
+    if(eRes.error) throw new Error(eRes.error);
+    if(eRes.entries){
+      // Debug: log first entry raw keys from Sheets
+      if(eRes.entries.length>0){
+        console.log('Raw keys from Sheets:', Object.keys(eRes.entries[0]));
+        console.log('Sample entry:', eRes.entries[0]);
+      }
+      entries = eRes.entries.map(normalizeEntry);
+    }
+    renderContracts();
+    renderCosts();
+    renderDashboard();
+    populateFilters();
+    setSyncState('synced','Synced · '+new Date().toLocaleTimeString());
+    toast('Data loaded ✓','success');
+  } catch(e){
+    setSyncState('error','Sync failed');
+    toast('Error: '+e.message,'error');
+  }
+}
+
+// ── NORMALIZE ──────────────────────────────────────────────
+function normalizeEntry(e){
+  const cur = e.Currency||'VND';
+  const amt = Number(e.Amount||e.amount||0);
+  const ex  = Number(e.ExchangeRate||e.exchangeRate||25000)||25000;
+  const amtVND = cur==='USD' ? amt*ex : amt;
+  return {
+    ID: String(e.ID||e.id||''),
+    Date: safeDate(e.Date||e.date),
+    Category: e.Category||e.category||'',
+    Description: String(e.Description||e.description||''),
+    Vendor: String(e.Vendor||e.vendor||''),
+    PO_Ref: String(e.PO_Ref||e.po||''),
+    Currency: cur, ExchangeRate: ex,
+    Budget: Number(e.Budget||e.budget||0),
+    BudgetY1: Number(e.BudgetY1||0), BudgetY2: Number(e.BudgetY2||0),
+    BudgetY3: Number(e.BudgetY3||0), BudgetY4: Number(e.BudgetY4||0),
+    BudgetY5: Number(e.BudgetY5||0),
+    Amount: amt, AmountVND: amtVND,
+    Notes: String(e.Notes||e.notes||''),
+    Sale: String(e.Sale||e.sale||''),
+    ChannelPartner: String(e.ChannelPartner||e.channelPartner||''),
+    EndUser: String(e.EndUser||e.endUser||''),
+    StartDate: safeDate(e.StartDate||e.startDate),
+    EndDate: safeDate(e.EndDate||e.endDate),
+    ContractStatus: e.ContractStatus||e.contractStatus||'Active'
+  };
+}
+
+function safeDate(v){
+  if(!v) return '';
+  const s=String(v).trim();
+  if(!s||s==='undefined'||s==='null') return '';
+  const m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  if(s.includes('T')){
+    const d=new Date(s);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function fmtInput(n){ return n?Math.round(n).toLocaleString('vi-VN'):''; }
+function parseInput(s){ return Number(String(s).replace(/\./g,'').replace(/,/g,'').replace(/[^\d]/g,''))||0; }
+function fmtVND(n){ return Math.round(n||0).toLocaleString('vi-VN'); }
+function parseDate(s){
+  if(!s) return null;
+  const p=String(s).slice(0,10).split('-');
+  if(p.length!==3) return null;
+  return new Date(+p[0],+p[1]-1,+p[2]);
+}
+function contractMonths(sd,ed){
+  if(!sd||!ed) return 0;
+  // Parse YYYY-MM-DD directly to avoid timezone shifts
+  const sp=String(sd).slice(0,10).split('-');
+  const ep=String(ed).slice(0,10).split('-');
+  if(sp.length<3||ep.length<3) return 0;
+  const months=(+ep[0]-+sp[0])*12+(+ep[1]-+sp[1]);
+  return Math.max(1,months);
+}
+
+// ── POPULATE FILTERS ──────────────────────────────────────
+function populateFilters(){
+  const catSel=document.getElementById('costCatFilter');
+  const cur=catSel.value;
+  catSel.innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('');
+}
+
+// ── COST TABLE ─────────────────────────────────────────────
+let costFilter = {q:'',cat:''};
+
+function renderCosts(){
+  const q = document.getElementById('costSearch').value.toLowerCase();
+  const cat = document.getElementById('costCatFilter').value;
+  let rows = entries.filter(e=>{
+    if(cat && e.Category!==cat) return false;
+    if(q && !JSON.stringify(e).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const body = document.getElementById('costBody');
+  body.innerHTML = rows.map((e,i)=>costRow(e,i+1)).join('');
+  attachCostEvents();
+}
+
+function costRow(e, idx){
+  const poOpts = [...new Set(entries.map(x=>x.PO_Ref).filter(Boolean))];
+  const usedVND = e.Currency==='USD' ? e.Amount*e.ExchangeRate : e.Amount;
+  return `<tr data-id="${e.ID}">
+    <td>${idx}</td>
+    <td><div class="cell" contenteditable="true" data-field="Date" data-id="${e.ID}">${e.Date||''}</div></td>
+    <td><div class="cell ac-cell" data-field="PO_Ref" data-id="${e.ID}" contenteditable="true">${e.PO_Ref||''}</div></td>
+    <td><select class="cell-select" data-field="Category" data-id="${e.ID}" onchange="updateEntryField(this)">
+      ${CATS.map(c=>`<option ${c===e.Category?'selected':''}>${c}</option>`).join('')}
+    </select></td>
+    <td><div class="cell num" contenteditable="true" data-field="Amount" data-id="${e.ID}">${e.Amount||''}</div></td>
+    <td><select class="cell-select" data-field="Currency" data-id="${e.ID}" onchange="updateEntryField(this);recalcVND(this)">
+      <option ${e.Currency==='VND'?'selected':''}>VND</option>
+      <option ${e.Currency==='USD'?'selected':''}>USD</option>
+    </select></td>
+    <td><div class="cell num" contenteditable="true" data-field="ExchangeRate" data-id="${e.ID}">${e.ExchangeRate||25000}</div></td>
+    <td><div class="cell num muted" style="background:var(--gray);pointer-events:none">${fmtVND(usedVND)} ₫</div></td>
+    <td><div class="cell" contenteditable="true" data-field="Notes" data-id="${e.ID}">${e.Notes||''}</div></td>
+    <td><button class="btn-danger" onclick="deleteEntry('${e.ID}')">✕</button></td>
+  </tr>`;
+}
+
+function attachCostEvents(){
+  document.querySelectorAll('#costBody .cell[contenteditable]').forEach(cell=>{
+    cell.addEventListener('blur', ()=> saveEntryField(cell));
+    cell.addEventListener('keydown', e=>{
+      if(e.key==='Tab'){
+        e.preventDefault();
+        const allCells=[...document.querySelectorAll('#costBody .cell[contenteditable],.cell-select')];
+        const idx=allCells.indexOf(cell);
+        if(idx<allCells.length-1) allCells[idx+1].focus();
+      }
+      if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); cell.blur(); }
+      if(e.key==='Enter'&&e.ctrlKey){ e.preventDefault(); addCostRow(); }
+    });
+  });
+}
+
+function updateEntryField(sel){
+  const id=sel.dataset.id, field=sel.dataset.field, val=sel.value;
+  const entry=entries.find(e=>e.ID===id);
+  if(!entry) return;
+  entry[field]=val;
+  saveToDB(entry);
+}
+
+function recalcVND(sel){
+  const row=sel.closest('tr');
+  if(!row) return;
+  const id=sel.dataset.id;
+  const entry=entries.find(e=>e.ID===id);
+  if(!entry) return;
+  const usedVND=entry.Currency==='USD'?entry.Amount*entry.ExchangeRate:entry.Amount;
+  const vndCell=row.querySelectorAll('.cell')[3];
+  if(vndCell) vndCell.textContent=fmtVND(usedVND)+' ₫';
+}
+
+function saveEntryField(cell){
+  const id=cell.dataset.id, field=cell.dataset.field;
+  const val=cell.textContent.trim();
+  const entry=entries.find(e=>e.ID===id);
+  if(!entry) return;
+  const old=entry[field];
+  const newVal = ['Amount','ExchangeRate','Budget','BudgetY1','BudgetY2','BudgetY3'].includes(field)
+    ? Number(val.replace(/[^\d.-]/g,''))||0 : val;
+  if(String(old)===String(newVal)) return;
+  entry[field]=newVal;
+  if(field==='Amount'||field==='ExchangeRate'||field==='Currency'){
+    const vndCell=cell.closest('tr').querySelectorAll('.cell')[3];
+    const usedVND=entry.Currency==='USD'?entry.Amount*entry.ExchangeRate:entry.Amount;
+    if(vndCell) vndCell.textContent=fmtVND(usedVND)+' ₫';
+  }
+  saveToDB(entry);
+}
+
+async function saveToDB(entry){
+  if(!SCRIPT_URL) return;
+  api({action:'updateEntry', entry})
+    .then(()=>toast('Saved ✓','success'))
+    .catch(()=>{}); // silent fail — local data already updated
+}
+
+function addCostRow(){
+  const id='new_'+Date.now();
+  const today=new Date().toISOString().slice(0,10);
+  const newE={
+    ID:id, Date:today, Category:CATS[0], PO_Ref:'',
+    Currency:'VND', ExchangeRate:25000, Amount:0, AmountVND:0,
+    Budget:0, BudgetY1:0, BudgetY2:0, BudgetY3:0, BudgetY4:0, BudgetY5:0,
+    Notes:'', Sale:'', ChannelPartner:'', EndUser:'',
+    StartDate:'', EndDate:'', ContractStatus:'Active', Description:'', Vendor:''
+  };
+  entries.unshift(newE);
+  renderCosts();
+  const firstCell=document.querySelector('#costBody .cell[contenteditable]');
+  if(firstCell) setTimeout(()=>firstCell.focus(),50);
+  if(SCRIPT_URL){
+    api({action:'addEntry', entry:{
+      date:today, category:CATS[0], po:'', currency:'VND',
+      exchangeRate:25000, budget:0, amount:0, amountVND:0,
+      notes:'', sale:'', channelPartner:'', endUser:'',
+      startDate:'', endDate:'', contractStatus:'Active',
+      description:'', vendor:''
+    }}).then(res=>{ newE.ID=res.id; }).catch(e=>toast('Error: '+e.message,'error'));
+  }
+}
+
+async function deleteEntry(id){
+  if(!confirm('Delete this entry?')) return;
+  entries=entries.filter(e=>e.ID!==id);
+  renderCosts();
+  if(SCRIPT_URL){
+    api({action:'deleteEntry', id})
+      .then(()=>toast('Deleted ✓','success'))
+      .catch(()=>toast('Deleted locally ✓','success'));
+  }
+}
+
+// ── CONTRACTS TABLE ────────────────────────────────────────
+function renderContracts(){
+  const q=document.getElementById('conSearch').value.toLowerCase();
+  const st=document.getElementById('conStatusFilter').value;
+
+  // Build contract list from entries
+  const poMap={};
+  entries.forEach(e=>{
+    const k=e.PO_Ref||e.ID;
+    if(!poMap[k]) poMap[k]={
+      po:k, endUser:'', partner:'', sale:'',
+      startDate:'', endDate:'', status:'Active', budgets:{}
+    };
+    // Always update contract info — pick from any entry that has it
+    if(e.EndUser)        poMap[k].endUser   = e.EndUser;
+    if(e.ChannelPartner) poMap[k].partner   = e.ChannelPartner;
+    if(e.Sale)           poMap[k].sale      = e.Sale;
+    if(e.StartDate)      poMap[k].startDate = e.StartDate;
+    if(e.EndDate)        poMap[k].endDate   = e.EndDate;
+    if(e.ContractStatus) poMap[k].status    = e.ContractStatus;
+
+    CATS.forEach(cat=>{ if(!poMap[k].budgets[cat]) poMap[k].budgets[cat]=[0,0,0,0,0]; });
+    const cat=e.Category;
+    if(cat){
+      const hasY=e.BudgetY1||e.BudgetY2||e.BudgetY3||e.BudgetY4||e.BudgetY5;
+      if(hasY){
+        if(e.BudgetY1>0) poMap[k].budgets[cat][0]+=e.BudgetY1;
+        if(e.BudgetY2>0) poMap[k].budgets[cat][1]+=e.BudgetY2;
+        if(e.BudgetY3>0) poMap[k].budgets[cat][2]+=e.BudgetY3;
+        if(e.BudgetY4>0) poMap[k].budgets[cat][3]+=e.BudgetY4;
+        if(e.BudgetY5>0) poMap[k].budgets[cat][4]+=e.BudgetY5;
+      } else if(e.Budget>0){
+        poMap[k].budgets[cat][0]+=e.Budget; // legacy fallback → Y1
+      }
+    }
+  });
+
+  let rows=Object.values(poMap).filter(c=>{
+    if(st && c.status!==st) return false;
+    if(q && !JSON.stringify(c).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  // Calculate years per contract
+  rows.forEach(c=>{
+    c.years = Math.max(1, Math.min(5, Math.round(contractMonths(c.startDate, c.endDate)/12)));
+  });
+
+  // Max years across all visible contracts → determines column count
+  const maxYears = rows.length ? Math.max(...rows.map(c=>c.years)) : 1;
+
+  // Rebuild thead dynamically
+  const thead = document.getElementById('conThead');
+  const catCols = CATS.flatMap(cat=>
+    Array.from({length:maxYears},(_,yi)=>
+      `<th style="min-width:120px;background:${yi===0?'#122040':'#0b1a2e'}">${cat} Y${yi+1}</th>`
+    )
+  ).join('');
+  thead.innerHTML=`<tr>
+    <th>#</th>
+    <th style="min-width:200px">PO / Contract Ref</th>
+    <th style="min-width:110px">Partner</th>
+    <th style="min-width:130px">End User</th>
+    <th style="min-width:100px">Sale</th>
+    <th style="min-width:100px">Start Date</th>
+    <th style="min-width:100px">End Date</th>
+    <th style="min-width:75px">Status</th>
+    <th style="min-width:60px">Months</th>
+    ${catCols}
+    <th style="min-width:140px;background:#0b2040">Total Budget</th>
+    <th style="min-width:50px"></th>
+  </tr>`;
+
+  const body=document.getElementById('conBody');
+  body.innerHTML=rows.map((c,i)=>contractRow(c,i+1,maxYears)).join('');
+}
+
+function contractRow(c, idx, maxYears){
+  const months=contractMonths(c.startDate,c.endDate);
+  const statusBadge=`<span class="badge badge-${(c.status||'Active').toLowerCase()}">${c.status||'Active'}</span>`;
+  const totalBud=CATS.reduce((s,cat)=>{
+    return s+(c.budgets[cat]||[]).reduce((a,v)=>a+(v||0),0);
+  },0);
+
+  // Budget columns: show up to contract's own years, gray out beyond
+  const budCols=CATS.flatMap(cat=>
+    Array.from({length:maxYears},(_,yi)=>{
+      const val=(c.budgets[cat]||[])[yi]||0;
+      const active=yi<c.years;
+      return `<td style="background:${active?'':'#f8f9fa'}">
+        <div class="cell num" style="color:${active?(val?'var(--text)':'var(--muted)'):'#d1d5db'}">${active?(val?fmtVND(val):''):''}</div>
+      </td>`;
+    })
+  ).join('');
+
+  return `<tr>
+    <td>${idx}</td>
+    <td><div class="cell" style="font-weight:600;color:var(--blue)">${c.po}</div></td>
+    <td><div class="cell">${c.partner||''}</div></td>
+    <td><div class="cell">${c.endUser||''}</div></td>
+    <td><div class="cell">${c.sale||''}</div></td>
+    <td><div class="cell">${c.startDate||''}</div></td>
+    <td><div class="cell">${c.endDate||''}</div></td>
+    <td style="padding:4px 8px">${statusBadge}</td>
+    <td><div class="cell muted" style="text-align:center">${months||'—'}</div></td>
+    ${budCols}
+    <td><div class="cell num" style="font-weight:700;color:var(--navy);background:#f0f4ff">${totalBud>0?fmtVND(totalBud)+' ₫':'—'}</div></td>
+    <td style="padding:4px 8px;white-space:nowrap">
+      <button class="btn-ghost" style="font-size:11px;padding:3px 8px" onclick="openEditContract('${c.po.replace(/'/g,"\'")}')">✏ Edit</button>
+    </td>
+  </tr>`;
+}
+
+function addContractRow(){
+  const thead=document.getElementById('conThead');
+  const thCols=thead?thead.querySelectorAll('th').length:10;
+  const curMaxYrs=Math.max(1,Math.round((thCols-10)/CATS.length));
+  // Expand thead to 5 years so user can fill any year
+  if(curMaxYrs<5){
+    const catCols=CATS.flatMap(cat=>
+      Array.from({length:5},(_,yi)=>
+        `<th style="min-width:120px;background:${yi===0?'#122040':'#0b1a2e'}">${cat} Y${yi+1}</th>`
+      )
+    ).join('');
+    thead.innerHTML=`<tr>
+      <th>#</th><th style="min-width:200px">PO / Contract Ref</th>
+      <th style="min-width:110px">Partner</th><th style="min-width:130px">End User</th>
+      <th style="min-width:100px">Sale</th><th style="min-width:100px">Start Date</th>
+      <th style="min-width:100px">End Date</th><th style="min-width:75px">Status</th>
+      <th style="min-width:60px">Months</th>${catCols}<th style="min-width:140px;background:#0b2040">Total Budget</th><th style="min-width:50px"></th>
+    </tr>`;
+  }
+  addContractRowWithData({years:5});
+}
+
+function addContractRowWithData(data={}){
+  const id='con_'+Date.now();
+  const body=document.getElementById('conBody');
+  const thead=document.getElementById('conThead');
+  const thCols=thead?thead.querySelectorAll('th').length:10;
+  const maxYears=data.years||Math.max(1,Math.round((thCols-10)/CATS.length));
+  const contractYrs=data.years||maxYears;
+
+  const budCols=CATS.flatMap(cat=>
+    Array.from({length:maxYears},(_,yi)=>{
+      const active=yi<contractYrs;
+      return `<td style="background:${active?'':'#f8f9fa'}"><div class="cell num" contenteditable="${active}" data-conid="${id}" data-cat="${cat}" data-yi="${yi}" style="color:${active?'var(--text)':'#d1d5db'}"></div></td>`;
+    })
+  ).join('');
+
+  const tr=document.createElement('tr');
+  tr.dataset.id=id;
+  tr.innerHTML=`
+    <td style="padding:4px 6px;white-space:nowrap;position:sticky;left:0;background:#fff;z-index:2">
+      <button class="btn-primary" style="font-size:11px;padding:4px 8px" onclick="saveNewContract('${id}')">💾</button>
+      <button class="btn-danger" style="margin-left:2px" onclick="this.closest('tr').remove()">✕</button>
+    </td>
+    <td><div class="cell" contenteditable="true" data-conid="${id}" data-field="po" style="font-weight:600;color:var(--blue)">${data.po||''}</div></td>
+    <td><div class="cell" contenteditable="true" data-conid="${id}" data-field="partner">${data.partner||''}</div></td>
+    <td><div class="cell" contenteditable="true" data-conid="${id}" data-field="endUser">${data.endUser||''}</div></td>
+    <td><div class="cell" contenteditable="true" data-conid="${id}" data-field="sale">${data.sale||''}</div></td>
+    <td><div class="cell date-cell" data-conid="${id}" data-field="startDate"><input type="date" class="date-input" value="${data.startDate||''}" data-conid="${id}" data-field="startDate"/></td>
+    <td><div class="cell date-cell" data-conid="${id}" data-field="endDate"><input type="date" class="date-input" value="${data.endDate||''}" data-conid="${id}" data-field="endDate"/></td>
+    <td><select class="cell-select" data-conid="${id}" data-field="status">
+      ${STATUSES.map(s=>`<option ${s===(data.status||'Active')?'selected':''}>${s}</option>`).join('')}
+    </select></td>
+    <td><div class="cell muted" id="months_${id}" style="text-align:center">${data.startDate&&data.endDate?contractMonths(data.startDate,data.endDate):'—'}</div></td>
+    ${budCols}
+    <td></td>
+  `;
+
+  body.insertBefore(tr, body.firstChild);
+
+  const allCells=[...tr.querySelectorAll('.cell[contenteditable],.cell-select')];
+
+  // Date inputs fire 'change' not 'blur'
+  tr.querySelectorAll('.date-input').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const sd=tr.querySelector('input[data-field="startDate"]')?.value||'';
+      const ed=tr.querySelector('input[data-field="endDate"]')?.value||'';
+      const m=contractMonths(sd,ed);
+      const mEl=document.getElementById('months_'+id);
+      if(mEl) mEl.textContent=m>0?m:'—';
+      const newYrs=Math.max(1,Math.min(5,Math.round(m/12)));
+      const thead=document.getElementById('conThead');
+      const thCols=thead?thead.querySelectorAll('th').length:10;
+      const curMaxYrs=Math.max(1,Math.round((thCols-10)/CATS.length));
+      if(newYrs!==curMaxYrs){
+        const savedPO=tr.querySelector('[data-field="po"]')?.textContent.trim()||'';
+        const savedSD=tr.querySelector('input[data-field="startDate"]')?.value||'';
+        const savedED=tr.querySelector('input[data-field="endDate"]')?.value||'';
+        const savedEU=tr.querySelector('[data-field="endUser"]')?.textContent.trim()||'';
+        const savedPA=tr.querySelector('[data-field="partner"]')?.textContent.trim()||'';
+        const savedSA=tr.querySelector('[data-field="sale"]')?.textContent.trim()||'';
+        const savedST=tr.querySelector('[data-field="status"]')?.value||'Active';
+        const catCols=CATS.flatMap(cat=>
+          Array.from({length:newYrs},(_,yi)=>
+            `<th style="min-width:120px;background:${yi===0?'#122040':'#0b1a2e'}">${cat} Y${yi+1}</th>`
+          )
+        ).join('');
+        thead.innerHTML=`<tr>
+          <th>#</th><th style="min-width:200px">PO / Contract Ref</th>
+          <th style="min-width:110px">Partner</th><th style="min-width:130px">End User</th>
+          <th style="min-width:100px">Sale</th><th style="min-width:100px">Start Date</th>
+          <th style="min-width:100px">End Date</th><th style="min-width:75px">Status</th>
+          <th style="min-width:60px">Months</th>${catCols}<th style="min-width:140px;background:#0b2040">Total Budget</th><th style="min-width:50px"></th>
+        </tr>`;
+        tr.remove();
+        addContractRowWithData({po:savedPO,startDate:savedSD,endDate:savedED,
+          endUser:savedEU,partner:savedPA,sale:savedSA,status:savedST,years:newYrs});
+      }
+    });
+  });
+  allCells.forEach((cell,i)=>{
+    cell.addEventListener('keydown', e=>{
+      if(e.key==='Tab'){ e.preventDefault(); if(i<allCells.length-1) allCells[i+1].focus(); }
+      if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); cell.blur(); }
+    });
+    cell.addEventListener('blur', ()=>{});
+  });
+
+  setTimeout(()=>tr.querySelector('.cell[contenteditable]')?.focus(),50);
+  toast('Enter Start/End Date to see year columns · Tab to move','info');
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────
+function populateDashMonths(){
+  const sel=document.getElementById('dashMonth');
+  const now=new Date();
+  const opts=[];
+  for(let i=-2;i<=14;i++){
+    const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const val=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const lbl=d.toLocaleString('en-US',{month:'long',year:'numeric'});
+    opts.push(`<option value="${val}" ${i===0?'selected':''}>${lbl}</option>`);
+  }
+  sel.innerHTML=opts.join('');
+
+  // Also add years from existing entries
+  const years=[...new Set(entries.map(e=>parseDate(e.Date)?.getFullYear()).filter(Boolean))];
+  years.forEach(yr=>{
+    for(let mo=0;mo<12;mo++){
+      const val=`${yr}-${String(mo+1).padStart(2,'0')}`;
+      if(!sel.querySelector(`option[value="${val}"]`)){
+        const lbl=new Date(yr,mo,1).toLocaleString('en-US',{month:'long',year:'numeric'});
+        const opt=document.createElement('option');
+        opt.value=val; opt.textContent=lbl;
+        sel.appendChild(opt);
+      }
+    }
+  });
+}
+
+function renderDashboard(){
+  const selMo=document.getElementById('dashMonth').value;
+  if(!selMo) return;
+  const [yrS,moS]=selMo.split('-');
+  const yr=+yrS, mo=+moS;
+  const pStart=new Date(yr,mo-1,1);
+  const pEnd=new Date(yr,mo,0);
+  const selYM=yr*12+mo;
+
+  // Active contracts in this month
+  const poMap={};
+  entries.forEach(e=>{
+    const k=e.PO_Ref||e.ID;
+    if(!poMap[k]) poMap[k]=[];
+    poMap[k].push(e);
+  });
+
+  // Per-category monthly budget
+  const catBudget={};
+  CATS.forEach(c=>catBudget[c]=0);
+  const activePOs=[];
+
+  Object.entries(poMap).forEach(([po,grp])=>{
+    const rep=grp.find(e=>e.StartDate)||grp[0];
+    const status=rep.ContractStatus||'Active';
+    if(['Expired','Terminated'].includes(status)) return;
+    const cs=parseDate(rep.StartDate), ce=parseDate(rep.EndDate);
+    if(cs&&ce){
+      const startYM=cs.getFullYear()*12+cs.getMonth()+1;
+      const endYM=ce.getFullYear()*12+ce.getMonth()+1;
+      if(startYM>selYM||endYM<selYM) return;
+    }
+    const months=contractMonths(rep.StartDate,rep.EndDate);
+    const monthsInto=Math.max(1,selYM-(cs?cs.getFullYear()*12+cs.getMonth()+1:selYM)+1);
+    const conYr=Math.min(5,Math.max(1,Math.ceil(monthsInto/12)));
+
+    activePOs.push({po, endUser:rep.EndUser, sale:rep.Sale,
+      startDate:rep.StartDate, endDate:rep.EndDate, status,
+      totalBud:grp.reduce((s,e)=>s+(e.BudgetY1||0)+(e.BudgetY2||0)+(e.BudgetY3||0),0)});
+
+    // Aggregate budget by category for this PO
+    const catBudMap={};
+    grp.forEach(e=>{
+      if(!catBudMap[e.Category]) catBudMap[e.Category]=[0,0,0,0,0];
+      catBudMap[e.Category][0]+=(e.BudgetY1||0);
+      catBudMap[e.Category][1]+=(e.BudgetY2||0);
+      catBudMap[e.Category][2]+=(e.BudgetY3||0);
+      catBudMap[e.Category][3]+=(e.BudgetY4||0);
+      catBudMap[e.Category][4]+=(e.BudgetY5||0);
+      // fallback to legacy Budget
+      if(!(e.BudgetY1||e.BudgetY2||e.BudgetY3)&&e.Budget>0)
+        catBudMap[e.Category][0]+=e.Budget;
+    });
+
+    CATS.forEach(cat=>{
+      const ybuds=catBudMap[cat]||[0,0,0,0,0];
+      const bud=ybuds[conYr-1]||0;
+      if(bud>0&&months>0) catBudget[cat]+=bud/12;
+    });
+  });
+
+  // Used this month
+  const catUsed={};
+  CATS.forEach(c=>catUsed[c]=0);
+  entries.forEach(e=>{
+    const d=parseDate(e.Date);
+    if(!d||d<pStart||d>pEnd) return;
+    catUsed[e.Category]=(catUsed[e.Category]||0)+e.AmountVND;
+  });
+
+  const totalBud=CATS.reduce((s,c)=>s+catBudget[c],0);
+  const totalUsed=CATS.reduce((s,c)=>s+catUsed[c],0);
+  const totalRem=totalBud-totalUsed;
+
+  // KPIs
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Active Contracts</div><div class="kpi-val">${activePOs.length}</div><div class="kpi-sub">in ${selMo}</div></div>
+    <div class="kpi amber"><div class="kpi-label">Monthly Budget</div><div class="kpi-val" style="font-size:16px">${fmtVND(totalBud)} ₫</div><div class="kpi-sub">allocated</div></div>
+    <div class="kpi"><div class="kpi-label">Used</div><div class="kpi-val" style="font-size:16px">${fmtVND(totalUsed)} ₫</div><div class="kpi-sub">actual spend</div></div>
+    <div class="kpi ${totalRem<0?'red':'green'}"><div class="kpi-label">Remaining</div><div class="kpi-val" style="font-size:16px">${fmtVND(Math.abs(totalRem))} ₫</div><div class="kpi-sub">${totalRem<0?'⚠ over budget':'under budget'}</div></div>
+  `;
+
+  // Category table
+  const body=document.getElementById('dashBody');
+  body.innerHTML=CATS.map(cat=>{
+    const bud=catBudget[cat]||0, used=catUsed[cat]||0;
+    if(!bud&&!used) return '';
+    const rem=bud-used;
+    const pct=bud>0?Math.min(100,Math.round(used/bud*100)):0;
+    const over=bud>0&&used>bud;
+    const barCol=over?'var(--red)':pct>70?'var(--amber)':'var(--green)';
+    return `<tr>
+      <td style="font-weight:600">${cat}</td>
+      <td>${bud>0?fmtVND(bud)+' ₫':'—'}</td>
+      <td style="color:var(--blue)">${fmtVND(used)} ₫</td>
+      <td style="color:${over?'var(--red)':'var(--green)'}">${bud>0?(over?'⚠ -':'+')+fmtVND(Math.abs(rem))+' ₫':'—'}</td>
+      <td><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${barCol}"></div></div><div style="font-size:10px;color:var(--muted);margin-top:2px">${pct}%</div></td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('dashFoot').innerHTML=`
+    <td>TOTAL</td>
+    <td>${totalBud>0?fmtVND(totalBud)+' ₫':'—'}</td>
+    <td>${fmtVND(totalUsed)} ₫</td>
+    <td style="color:${totalRem<0?'#f87171':'#4ade80'}">${totalBud>0?(totalRem<0?'⚠ -':'+')+fmtVND(Math.abs(totalRem))+' ₫':'—'}</td>
+    <td></td>
+  `;
+
+  // Active contracts list
+  document.getElementById('dashContracts')?.remove();
+}
+
+// ── TABS ───────────────────────────────────────────────────
+function showTab(name, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-'+name).classList.add('active');
+  if(name==='dashboard') renderDashboard();
+  if(name==='contracts') renderContracts();
+}
+
+// ── EXPORT CSV ─────────────────────────────────────────────
+function exportCSV(){
+  const hdrs=['Date','PO_Ref','Category','Currency','ExchangeRate','Amount','UsedVND','Notes','Sale','EndUser','StartDate','EndDate','ContractStatus'];
+  const rows=entries.map(e=>hdrs.map(h=>{
+    const v=e[h]??'';
+    if(['Notes','Sale','EndUser','PO_Ref','Category','ContractStatus'].includes(h)) return `"${String(v).replace(/"/g,'""')}"`;
+    return v;
+  }));
+  const csv='\uFEFF'+[hdrs,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`MA_Costs_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV exported ✓','success');
+}
+
+// ── CLEAR FILTERS ──────────────────────────────────────────
+function clearCostFilter(){
+  document.getElementById('costSearch').value='';
+  document.getElementById('costCatFilter').value='';
+  renderCosts();
+}
+function clearConFilter(){
+  document.getElementById('conSearch').value='';
+  document.getElementById('conStatusFilter').value='';
+  renderContracts();
+}
+
+// ── EMAIL REPORT ───────────────────────────────────────────
+function buildEmailHTML(selMo, kpiData, catRows){
+  const MONTH_NAMES=['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+  const [yr,mo]=selMo.split('-');
+  const periodLabel=`${MONTH_NAMES[+mo-1]} ${yr}`;
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f0f3f8;font-family:Arial,sans-serif">
+<div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden">
+  <div style="background:#0b1a2e;padding:24px 28px">
+    <div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em">DCSS Technology</div>
+    <div style="font-size:22px;font-weight:700;color:#fff;margin-top:4px">MA Tracker — Monthly Report</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.6);margin-top:4px">${periodLabel}</div>
+  </div>
+  <div style="display:flex;border-bottom:1px solid #e5e7eb">
+    ${kpiData.map(k=>`<div style="flex:1;padding:16px;text-align:center;border-right:1px solid #e5e7eb">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">${k.label}</div>
+      <div style="font-size:18px;font-weight:700;color:${k.color||'#0b1a2e'};margin-top:4px">${k.value}</div>
+    </div>`).join('')}
+  </div>
+  <div style="padding:16px 24px 8px">
+    <div style="font-size:11px;font-weight:700;color:#0b1a2e;text-transform:uppercase;letter-spacing:.06em">Budget vs. Used by Category</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="background:#0b1a2e">
+        <th style="padding:8px 16px;text-align:left;font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase">Category</th>
+        <th style="padding:8px 16px;text-align:right;font-size:10px;color:rgba(255,255,255,.6)">Monthly Budget</th>
+        <th style="padding:8px 16px;text-align:right;font-size:10px;color:rgba(255,255,255,.6)">Used</th>
+        <th style="padding:8px 16px;text-align:right;font-size:10px;color:rgba(255,255,255,.6)">Remaining</th>
+        <th style="padding:8px 16px;text-align:right;font-size:10px;color:rgba(255,255,255,.6)">%</th>
+      </tr>
+    </thead>
+    <tbody>${catRows}</tbody>
+  </table>
+  <div style="padding:14px 24px;background:#f4f6fa;border-top:1px solid #dde3ee;font-size:11px;color:#9ca3af">
+    Auto-generated by MA Contract Tracker · ${new Date().toLocaleString('vi-VN')}
+  </div>
+</div></body></html>`;
+}
+
+async function sendMonthlyEmail(){
+  const selMo = document.getElementById('dashMonth')?.value;
+  if(!selMo) return;
+  const [yrS,moS]=selMo.split('-');
+  const yr=+yrS, mo=+moS;
+  const pStart=new Date(yr,mo-1,1), pEnd=new Date(yr,mo,0);
+  const selYM=yr*12+mo;
+  const RECIPIENTS=['quan.nguyen@dcsstech.com','nguyenhaiquanbkk59@gmail.com'];
+
+  // Recalculate data
+  const poMap={};
+  entries.forEach(e=>{
+    const k=e.PO_Ref||e.ID;
+    if(!poMap[k]) poMap[k]=[];
+    poMap[k].push(e);
+  });
+
+  const catBudget={}, catUsed={};
+  CATS.forEach(c=>{catBudget[c]=0;catUsed[c]=0;});
+  let activeCnt=0;
+
+  Object.entries(poMap).forEach(([po,grp])=>{
+    const rep=grp.find(e=>e.StartDate)||grp[0];
+    const status=rep.ContractStatus||'Active';
+    if(['Expired','Terminated'].includes(status)) return;
+    const cs=parseDate(rep.StartDate), ce=parseDate(rep.EndDate);
+    if(cs&&ce){
+      const startYM=cs.getFullYear()*12+cs.getMonth()+1;
+      const endYM=ce.getFullYear()*12+ce.getMonth()+1;
+      if(startYM>selYM||endYM<selYM) return;
+    }
+    activeCnt++;
+    const months=contractMonths(rep.StartDate,rep.EndDate);
+    const cs2=parseDate(rep.StartDate);
+    const startYM2=cs2?cs2.getFullYear()*12+cs2.getMonth()+1:selYM;
+    const monthsInto=Math.max(1,selYM-startYM2+1);
+    const conYr=Math.min(5,Math.max(1,Math.ceil(monthsInto/12)));
+    const catBudMap={};
+    grp.forEach(e=>{
+      if(!catBudMap[e.Category]) catBudMap[e.Category]=[0,0,0,0,0];
+      [e.BudgetY1,e.BudgetY2,e.BudgetY3,e.BudgetY4,e.BudgetY5].forEach((v,i)=>catBudMap[e.Category][i]+=(v||0));
+      if(!(e.BudgetY1||e.BudgetY2)&&e.Budget>0) catBudMap[e.Category][0]+=e.Budget;
+    });
+    CATS.forEach(cat=>{
+      const ybuds=catBudMap[cat]||[0,0,0,0,0];
+      const bud=ybuds[conYr-1]||0;
+      if(bud>0&&months>0) catBudget[cat]+=bud/12;
+    });
+  });
+  entries.forEach(e=>{
+    const d=parseDate(e.Date);
+    if(!d||d<pStart||d>pEnd) return;
+    catUsed[e.Category]=(catUsed[e.Category]||0)+e.AmountVND;
+  });
+
+  const totalBud=CATS.reduce((s,c)=>s+catBudget[c],0);
+  const totalUsed=CATS.reduce((s,c)=>s+catUsed[c],0);
+  const totalRem=totalBud-totalUsed;
+
+  const kpiData=[
+    {label:'Active Contracts',value:activeCnt,color:'#0b1a2e'},
+    {label:'Monthly Budget',value:fmtVND(totalBud)+' ₫',color:'#1565c0'},
+    {label:'Used',value:fmtVND(totalUsed)+' ₫',color:'#1e88e5'},
+    {label:'Remaining',value:(totalRem<0?'⚠ -':'+')+fmtVND(Math.abs(totalRem))+' ₫',color:totalRem<0?'#dc2626':'#059669'},
+  ];
+
+  const catRows=CATS.map(cat=>{
+    const bud=catBudget[cat]||0, used=catUsed[cat]||0;
+    if(!bud&&!used) return '';
+    const rem=bud-used, pct=bud>0?Math.round(used/bud*100):0;
+    const over=bud>0&&used>bud;
+    return `<tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:10px 16px;font-weight:600">${cat}</td>
+      <td style="padding:10px 16px;text-align:right;color:#1565c0">${bud>0?fmtVND(bud)+' ₫':'—'}</td>
+      <td style="padding:10px 16px;text-align:right;color:#1e88e5;font-weight:700">${fmtVND(used)} ₫</td>
+      <td style="padding:10px 16px;text-align:right;color:${over?'#dc2626':'#059669'};font-weight:700">${bud>0?(over?'⚠ -':'+')+fmtVND(Math.abs(rem))+' ₫':'—'}</td>
+      <td style="padding:10px 16px;text-align:right;color:${over?'#dc2626':'#6b7280'}">${pct}%</td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  const html=buildEmailHTML(selMo,kpiData,catRows);
+
+  // Send via Apps Script
+  try{
+    await api({action:'sendReport', recipients:RECIPIENTS, subject:`[MA Tracker] Monthly Report — ${selMo}`, html});
+    toast('Report sent to '+RECIPIENTS.join(', '),'success');
+  }catch(e){ toast('Send failed: '+e.message,'error'); }
+}
+
+// Schedule check: run every minute, send on last day of month at 16:00
+function scheduleMonthlyEmail(){
+  const check=()=>{
+    const now=new Date();
+    const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    if(now.getDate()===lastDay && now.getHours()===16 && now.getMinutes()===0){
+      sendMonthlyEmail();
+    }
+  };
+  setInterval(check, 60000);
+}
+// ── DRAG SCROLL ────────────────────────────────────────────
+function initDragScroll(el){
+  let isDown=false, startX, startY, scrollL, scrollT;
+  el.addEventListener('mousedown', e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||
+       e.target.contentEditable==='true'||e.target.tagName==='BUTTON') return;
+    isDown=true; el.classList.add('dragging');
+    startX=e.pageX-el.offsetLeft; startY=e.pageY-el.offsetTop;
+    scrollL=el.scrollLeft; scrollT=el.scrollTop;
+  });
+  el.addEventListener('mouseleave',()=>{ isDown=false; el.classList.remove('dragging'); });
+  el.addEventListener('mouseup',  ()=>{ isDown=false; el.classList.remove('dragging'); });
+  el.addEventListener('mousemove', e=>{
+    if(!isDown) return; e.preventDefault();
+    el.scrollLeft=scrollL-(e.pageX-el.offsetLeft-startX);
+    el.scrollTop =scrollT-(e.pageY-el.offsetTop-startY);
+  });
+}
+
+async function saveNewContract(rowId){
+  const tr = document.querySelector(`tr[data-id="${rowId}"]`);
+  if(!tr){ toast('Row not found','error'); return; }
+
+  const po        = tr.querySelector('[data-field="po"]')?.textContent.trim()||'';
+  const partner   = tr.querySelector('[data-field="partner"]')?.textContent.trim()||'';
+  const endUser   = tr.querySelector('[data-field="endUser"]')?.textContent.trim()||'';
+  const sale      = tr.querySelector('[data-field="sale"]')?.textContent.trim()||'';
+  const startDate = tr.querySelector('input[data-field="startDate"]')?.value||'';
+  const endDate   = tr.querySelector('input[data-field="endDate"]')?.value||'';
+  const status    = tr.querySelector('[data-field="status"]')?.value||'Active';
+
+  if(!po){ toast('PO Reference is required','error'); return; }
+  if(!startDate||!endDate){ toast('Start Date and End Date are required','error'); return; }
+
+  // Read budget per category per year
+  const budgets={};
+  CATS.forEach(cat=>{
+    budgets[cat]=Array.from({length:5},(_,yi)=>{
+      const cell=tr.querySelector(`[data-cat="${cat}"][data-yi="${yi}"]`);
+      return cell?parseInput(cell.textContent.trim()):0;
+    });
+  });
+
+  const today=new Date().toISOString().slice(0,10);
+  const toSave=[];
+
+  // Create 1 entry per category that has budget
+  CATS.forEach(cat=>{
+    const totalCatBud=budgets[cat].reduce((s,v)=>s+v,0);
+    if(totalCatBud===0) return;
+    toSave.push({
+      date:today, category:cat,
+      po, currency:'VND', exchangeRate:25000,
+      budget:totalCatBud,
+      budgetY1:budgets[cat][0], budgetY2:budgets[cat][1],
+      budgetY3:budgets[cat][2], budgetY4:budgets[cat][3],
+      budgetY5:budgets[cat][4],
+      amount:0, amountVND:0,
+      sale, channelPartner:partner, endUser,
+      startDate, endDate, contractStatus:status,
+      description:'', vendor:'', notes:''
+    });
+  });
+
+  // If no budget at all, save 1 placeholder entry
+  if(toSave.length===0){
+    toSave.push({
+      date:today, category:CATS[0],
+      po, currency:'VND', exchangeRate:25000,
+      budget:0, budgetY1:0, budgetY2:0, budgetY3:0, budgetY4:0, budgetY5:0,
+      amount:0, amountVND:0,
+      sale, channelPartner:partner, endUser,
+      startDate, endDate, contractStatus:status,
+      description:'', vendor:'', notes:''
+    });
+  }
+
+  // Save to memory
+  toSave.forEach(e=>{
+    const newE=normalizeEntry({...e,
+      ID:'local_'+Date.now()+'_'+Math.random(),
+      Date:e.date, Category:e.category, PO_Ref:e.po,
+      Currency:e.currency, ExchangeRate:e.exchangeRate,
+      Budget:e.budget, BudgetY1:e.budgetY1, BudgetY2:e.budgetY2,
+      BudgetY3:e.budgetY3, BudgetY4:e.budgetY4, BudgetY5:e.budgetY5,
+      Amount:e.amount, AmountVND:e.amountVND,
+      Sale:e.sale, ChannelPartner:e.channelPartner, EndUser:e.endUser,
+      StartDate:e.startDate, EndDate:e.endDate,
+      ContractStatus:e.contractStatus, Notes:'', Description:'', Vendor:''
+    });
+    entries.push(newE);
+  });
+
+  tr.remove();
+  renderContracts();
+
+  // Save to Sheets
+  if(SCRIPT_URL){
+    try{
+      await Promise.all(toSave.map(e=>api({action:'addEntry', entry:e})));
+      toast(`Contract saved (${toSave.length} categories) ✓`,'success');
+      // Refresh to get real IDs from Sheets
+      setTimeout(refreshAll, 1500);
+    }catch(err){
+      toast('Save error: '+err.message,'error');
+    }
+  } else {
+    toast('Saved locally ✓','success');
+  }
+}
+let editingPO = null;
+
+function openEditContract(po){
+  editingPO = po;
+  // Find contract data from entries
+  const grp = entries.filter(e=>e.PO_Ref===po);
+  const rep  = grp.find(e=>e.StartDate)||grp[0]||{};
+  const budgets = {};
+  CATS.forEach(cat=>{ budgets[cat]=[0,0,0,0,0]; });
+  grp.forEach(e=>{
+    const cat=e.Category;
+    if(!cat) return;
+    const hasY=e.BudgetY1||e.BudgetY2||e.BudgetY3||e.BudgetY4||e.BudgetY5;
+    if(hasY){
+      [e.BudgetY1,e.BudgetY2,e.BudgetY3,e.BudgetY4,e.BudgetY5].forEach((v,i)=>{ if(v>0) budgets[cat][i]+=v; });
+    } else if(e.Budget>0){
+      budgets[cat][0]+=e.Budget; // legacy → Y1
+    }
+  });
+  const months = contractMonths(rep.StartDate||'', rep.EndDate||'');
+  const yrs    = Math.max(1,Math.min(5,Math.round(months/12)));
+
+  const fld=(id,label,val,type='text')=>`
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">${label}</label>
+      <input id="em_${id}" type="${type}" value="${(val||'').toString().replace(/"/g,'&quot;')}"
+        style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--ff);font-size:13px;outline:none"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
+    </div>`;
+
+  let html = `
+    ${fld('po','PO / Contract Ref',po)}
+    ${fld('endUser','End User',rep.EndUser)}
+    ${fld('partner','Partner',rep.ChannelPartner)}
+    ${fld('sale','Sale',rep.Sale)}
+    ${fld('startDate','Start Date',rep.StartDate,'date')}
+    ${fld('endDate','End Date',rep.EndDate,'date')}
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Status</label>
+      <select id="em_status" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--ff);font-size:13px">
+        ${STATUSES.map(s=>`<option ${s===(rep.ContractStatus||'Active')?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div></div>
+    <div style="grid-column:1/-1;margin-top:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+        Budget by Year (Y1=Year 1, Y2=Year 2...) — only Y1–Y${yrs} active for this contract
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+        ${CATS.flatMap(cat=>
+          Array.from({length:yrs},(_,yi)=>`
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <label style="font-size:10px;font-weight:600;color:${yi===0?'var(--blue)':'var(--muted)'}">${cat} Y${yi+1}</label>
+              <input id="em_bud_${cat.replace(/ /g,'_')}_${yi}" type="text" inputmode="numeric"
+                value="${budgets[cat][yi]?fmtInput(budgets[cat][yi]):''}" placeholder="0"
+                style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--ff);font-size:12px;text-align:right"
+                onfocus="this.value=parseInput(this.value)||'';this.style.borderColor='var(--blue)'"
+                onblur="this.value=parseInput(this.value)?fmtInput(parseInput(this.value)):'';this.style.borderColor='var(--border)'"
+                oninput=""/>
+            </div>`)
+        ).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('editModalBody').innerHTML=html;
+  document.getElementById('editModal').style.display='block';
+  document.getElementById('em_po').focus();
+}
+
+function closeEditModal(){
+  document.getElementById('editModal').style.display='none';
+  editingPO=null;
+}
+
+async function saveEditContract(){
+  const newPO     = document.getElementById('em_po').value.trim();
+  const endUser   = document.getElementById('em_endUser').value.trim();
+  const partner   = document.getElementById('em_partner').value.trim();
+  const sale      = document.getElementById('em_sale').value.trim();
+  const startDate = document.getElementById('em_startDate').value;
+  const endDate   = document.getElementById('em_endDate').value;
+  const status    = document.getElementById('em_status').value;
+
+  const budgets={};
+  CATS.forEach(cat=>{
+    budgets[cat]=Array.from({length:5},(_,yi)=>{
+      const inp=document.getElementById(`em_bud_${cat.replace(/ /g,'_')}_${yi}`);
+      return inp?parseInput(inp.value):0;
+    });
+  });
+
+  // Update all entries for this PO
+  const toUpdate=entries.filter(e=>e.PO_Ref===editingPO);
+  if(!toUpdate.length){ toast('No entries found for this PO','error'); return; }
+
+  toUpdate.forEach(e=>{
+    e.PO_Ref=newPO; e.EndUser=endUser; e.ChannelPartner=partner;
+    e.Sale=sale; e.StartDate=startDate; e.EndDate=endDate;
+    e.ContractStatus=status;
+    const b=budgets[e.Category]||[0,0,0,0,0];
+    e.BudgetY1=b[0]; e.BudgetY2=b[1]; e.BudgetY3=b[2]; e.BudgetY4=b[3]; e.BudgetY5=b[4];
+    e.Budget=b.reduce((s,v)=>s+v,0);
+  });
+
+  closeEditModal();
+  renderContracts();
+
+  // Save to Sheets (best-effort — local save already done above)
+  if(SCRIPT_URL){
+    Promise.all(toUpdate.map(e=>api({action:'updateEntry',entry:e})))
+      .then(()=>toast(`Saved (${toUpdate.length} entries) ✓`,'success'))
+      .catch(()=>toast(`Saved locally · Sync when deployed ✓`,'success'));
+  } else {
+    toast('Saved locally ✓','success');
+  }
+}
+
+// ── EXPORT CONTRACTS EXCEL ─────────────────────────────────
+function exportContractExcel(){
+  if(typeof XLSX==='undefined'){ toast('XLSX not loaded yet','error'); return; }
+  const poMap={};
+  entries.forEach(e=>{
+    const k=e.PO_Ref||e.ID;
+    if(!poMap[k]) poMap[k]={po:k,endUser:e.EndUser,partner:e.ChannelPartner,
+      sale:e.Sale,startDate:e.StartDate,endDate:e.EndDate,status:e.ContractStatus,budgets:{}};
+    CATS.forEach(cat=>{ if(!poMap[k].budgets[cat]) poMap[k].budgets[cat]=[0,0,0,0,0]; });
+    const cat=e.Category;
+    if(cat){
+      [e.BudgetY1,e.BudgetY2,e.BudgetY3,e.BudgetY4,e.BudgetY5].forEach((v,i)=>{ if(v>0) poMap[k].budgets[cat][i]+=v; });
+      if(!(e.BudgetY1||e.BudgetY2)&&e.Budget>0) poMap[k].budgets[cat][0]+=e.Budget;
+    }
+  });
+
+  const headers=['PO / Contract Ref','Partner','End User','Sale',
+    'Start Date','End Date','Status','Months','Total Budget',
+    ...CATS.flatMap(cat=>[`${cat} Y1`,`${cat} Y2`,`${cat} Y3`])];
+
+  const rows=Object.values(poMap).map(c=>{
+    const months=contractMonths(c.startDate,c.endDate);
+    const totalBud=CATS.reduce((s,cat)=>(c.budgets[cat]||[]).reduce((a,v)=>a+v,0)+s,0);
+    return [c.po,c.partner,c.endUser,c.sale,c.startDate,c.endDate,c.status,months,totalBud,
+      ...CATS.flatMap(cat=>[(c.budgets[cat]||[])[0]||0,(c.budgets[cat]||[])[1]||0,(c.budgets[cat]||[])[2]||0])];
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=[{wch:28},{wch:16},{wch:20},{wch:14},{wch:13},{wch:13},{wch:12},{wch:8},{wch:16},
+    ...CATS.flatMap(()=>[{wch:16},{wch:16},{wch:16}])];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Contracts');
+  XLSX.writeFile(wb,`MA_Contracts_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Contracts exported ✓','success');
+}
+
+// ── EXPORT COST ENTRIES EXCEL ──────────────────────────────
+function exportCostExcel(){
+  if(typeof XLSX==='undefined'){ toast('XLSX not loaded yet','error'); return; }
+  const q   = document.getElementById('costSearch').value.toLowerCase();
+  const cat = document.getElementById('costCatFilter').value;
+  let rows  = entries.filter(e=>{
+    if(cat&&e.Category!==cat) return false;
+    if(q&&!JSON.stringify(e).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const headers=['Date','PO Ref','Category','Currency','Exchange Rate','Used','Used (VND)','Notes','Sale','End User','Start Date','End Date','Status'];
+  const data=rows.map(e=>[e.Date,e.PO_Ref,e.Category,e.Currency,e.ExchangeRate,
+    e.Amount,e.AmountVND,e.Notes,e.Sale,e.EndUser,e.StartDate,e.EndDate,e.ContractStatus]);
+
+  const ws=XLSX.utils.aoa_to_sheet([headers,...data]);
+  ws['!cols']=[{wch:13},{wch:26},{wch:22},{wch:10},{wch:13},{wch:16},{wch:16},{wch:24},{wch:14},{wch:18},{wch:13},{wch:13},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Cost Entries');
+  const suffix=cat?`_${cat}`:'';
+  XLSX.writeFile(wb,`MA_CostEntries${suffix}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`Exported ${rows.length} entries ✓`,'success');
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+async function exportDashPNG(){
+  const selMo = document.getElementById('dashMonth')?.value || 'report';
+  const el = document.getElementById('page-dashboard');
+  if(!el){ toast('Dashboard not found','error'); return; }
+  if(typeof html2canvas==='undefined'){ toast('html2canvas not loaded yet, try again','error'); return; }
+
+  toast('Capturing…','info');
+  try {
+    const canvas = await html2canvas(el, {
+      scale:2, backgroundColor:'#f0f3f8', useCORS:true,
+      logging:false, windowWidth:1200,
+      scrollX:0, scrollY:-window.scrollY
+    });
+    const link = document.createElement('a');
+    link.download = `MA_Dashboard_${selMo}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast('PNG exported ✓','success');
+  } catch(e){ toast('Export failed: '+e.message,'error'); }
+}
+
+// ── EXPORT DASHBOARD EXCEL ─────────────────────────────────
+function exportDashExcel(){
+  if(typeof XLSX==='undefined'){ toast('XLSX library not loaded yet, try again','error'); return; }
+  const selMo = document.getElementById('dashMonth')?.value || '';
+  const [yrS,moS] = (selMo||'2026-01').split('-');
+  const yr=+yrS, mo=+moS;
+  const selYM=yr*12+mo;
+  const pStart=new Date(yr,mo-1,1), pEnd=new Date(yr,mo,0);
+
+  const poMap={};
+  entries.forEach(e=>{ const k=e.PO_Ref||e.ID; if(!poMap[k]) poMap[k]=[]; poMap[k].push(e); });
+
+  const catBudget={}, catUsed={};
+  CATS.forEach(c=>{catBudget[c]=0; catUsed[c]=0;});
+  let activeCnt=0;
+
+  Object.entries(poMap).forEach(([po,grp])=>{
+    const rep=grp.find(e=>e.StartDate)||grp[0];
+    const status=rep.ContractStatus||'Active';
+    if(['Expired','Terminated'].includes(status)) return;
+    const cs=parseDate(rep.StartDate), ce=parseDate(rep.EndDate);
+    if(cs&&ce){
+      const sYM=cs.getFullYear()*12+cs.getMonth()+1;
+      const eYM=ce.getFullYear()*12+ce.getMonth()+1;
+      if(sYM>selYM||eYM<selYM) return;
+    }
+    activeCnt++;
+    const months=contractMonths(rep.StartDate,rep.EndDate);
+    const cs2=parseDate(rep.StartDate);
+    const sYM2=cs2?cs2.getFullYear()*12+cs2.getMonth()+1:selYM;
+    const mInto=Math.max(1,selYM-sYM2+1);
+    const conYr=Math.min(5,Math.max(1,Math.ceil(mInto/12)));
+    const cbm={};
+    grp.forEach(e=>{
+      if(!cbm[e.Category]) cbm[e.Category]=[0,0,0,0,0];
+      [e.BudgetY1,e.BudgetY2,e.BudgetY3,e.BudgetY4,e.BudgetY5].forEach((v,i)=>cbm[e.Category][i]+=(v||0));
+      if(!(e.BudgetY1||e.BudgetY2)&&e.Budget>0) cbm[e.Category][0]+=e.Budget;
+    });
+    CATS.forEach(cat=>{
+      const bud=(cbm[cat]||[0,0,0,0,0])[conYr-1]||0;
+      if(bud>0&&months>0) catBudget[cat]+=bud/12;
+    });
+  });
+  entries.forEach(e=>{
+    const d=parseDate(e.Date);
+    if(!d||d<pStart||d>pEnd) return;
+    catUsed[e.Category]=(catUsed[e.Category]||0)+e.AmountVND;
+  });
+
+  const totalBud=CATS.reduce((s,c)=>s+catBudget[c],0);
+  const totalUsed=CATS.reduce((s,c)=>s+catUsed[c],0);
+  const totalRem=totalBud-totalUsed;
+
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: Dashboard summary
+  const rows=[
+    ['MA CONTRACT TRACKER — Monthly Dashboard'],
+    [`Period: ${selMo}   |   Generated: ${new Date().toLocaleString('vi-VN')}`],
+    [],
+    ['KPI','Value'],
+    ['Active Contracts', activeCnt],
+    ['Monthly Budget (VND)', totalBud],
+    ['Used This Month (VND)', totalUsed],
+    ['Remaining (VND)', totalRem],
+    [],
+    ['Category','Monthly Budget (VND)','Used This Month (VND)','Remaining (VND)','% Used'],
+    ...CATS.map(cat=>{
+      const bud=catBudget[cat]||0, used=catUsed[cat]||0;
+      return [cat, bud, used, bud-used, bud>0?used/bud:0];
+    }),
+    ['TOTAL', totalBud, totalUsed, totalRem, totalBud>0?totalUsed/totalBud:0],
+  ];
+  const ws1=XLSX.utils.aoa_to_sheet(rows);
+  ws1['!cols']=[{wch:32},{wch:22},{wch:22},{wch:22},{wch:10}];
+  // Format percentages
+  for(let r=10; r<=10+CATS.length; r++){
+    const ref='E'+(r+1);
+    if(ws1[ref]) ws1[ref].z='0%';
+  }
+  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard');
+
+  // Sheet 2: Cost entries this month
+  const monthE=entries.filter(e=>{ const d=parseDate(e.Date); return d&&d>=pStart&&d<=pEnd; });
+  const ws2=XLSX.utils.aoa_to_sheet([
+    ['Date','PO Ref','Category','Currency','Used','Used (VND)','Notes'],
+    ...monthE.map(e=>[e.Date,e.PO_Ref,e.Category,e.Currency,e.Amount,e.AmountVND,e.Notes])
+  ]);
+  ws2['!cols']=[{wch:13},{wch:26},{wch:22},{wch:10},{wch:16},{wch:16},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Cost Entries');
+
+  XLSX.writeFile(wb, `MA_Dashboard_${selMo}.xlsx`);
+  toast('Excel exported ✓','success');
+}
+
+function toast(msg,type='success'){
+  const stack=document.getElementById('toasts');
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.textContent=msg;
+  stack.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),350); },2500);
+}
+
+// ── INIT ───────────────────────────────────────────────────
+populateDashMonths();
+populateFilters();
+renderContracts();
+renderCosts();
+renderDashboard();
+refreshAll();
+scheduleMonthlyEmail();
+// Init drag scroll on all tables
+document.querySelectorAll('.sheet-wrap').forEach(initDragScroll);
+</script>
+</body>
+</html>
