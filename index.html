@@ -702,7 +702,10 @@ function addContractRowWithData(data={}){
     </select></td>
     <td><div class="cell muted" id="months_${id}" style="text-align:center">${data.startDate&&data.endDate?contractMonths(data.startDate,data.endDate):'—'}</div></td>
     ${budCols}
-    <td><button class="btn-danger" onclick="this.closest('tr').remove()">✕</button></td>
+    <td style="padding:4px 8px;white-space:nowrap;display:flex;gap:4px">
+      <button class="btn-primary" style="font-size:11px;padding:4px 10px" onclick="saveNewContract('${id}')">💾 Save</button>
+      <button class="btn-danger" onclick="this.closest('tr').remove()">✕</button>
+    </td>
   `;
 
   body.insertBefore(tr, body.firstChild);
@@ -1096,7 +1099,97 @@ function initDragScroll(el){
   });
 }
 
-// ── EDIT CONTRACT MODAL ────────────────────────────────────
+async function saveNewContract(rowId){
+  const tr = document.querySelector(`tr[data-id="${rowId}"]`);
+  if(!tr){ toast('Row not found','error'); return; }
+
+  const po        = tr.querySelector('[data-field="po"]')?.textContent.trim()||'';
+  const partner   = tr.querySelector('[data-field="partner"]')?.textContent.trim()||'';
+  const endUser   = tr.querySelector('[data-field="endUser"]')?.textContent.trim()||'';
+  const sale      = tr.querySelector('[data-field="sale"]')?.textContent.trim()||'';
+  const startDate = tr.querySelector('input[data-field="startDate"]')?.value||'';
+  const endDate   = tr.querySelector('input[data-field="endDate"]')?.value||'';
+  const status    = tr.querySelector('[data-field="status"]')?.value||'Active';
+
+  if(!po){ toast('PO Reference is required','error'); return; }
+  if(!startDate||!endDate){ toast('Start Date and End Date are required','error'); return; }
+
+  // Read budget per category per year
+  const budgets={};
+  CATS.forEach(cat=>{
+    budgets[cat]=Array.from({length:5},(_,yi)=>{
+      const cell=tr.querySelector(`[data-cat="${cat}"][data-yi="${yi}"]`);
+      return cell?parseInput(cell.textContent.trim()):0;
+    });
+  });
+
+  const today=new Date().toISOString().slice(0,10);
+  const toSave=[];
+
+  // Create 1 entry per category that has budget
+  CATS.forEach(cat=>{
+    const totalCatBud=budgets[cat].reduce((s,v)=>s+v,0);
+    if(totalCatBud===0) return;
+    toSave.push({
+      date:today, category:cat,
+      po, currency:'VND', exchangeRate:25000,
+      budget:totalCatBud,
+      budgetY1:budgets[cat][0], budgetY2:budgets[cat][1],
+      budgetY3:budgets[cat][2], budgetY4:budgets[cat][3],
+      budgetY5:budgets[cat][4],
+      amount:0, amountVND:0,
+      sale, channelPartner:partner, endUser,
+      startDate, endDate, contractStatus:status,
+      description:'', vendor:'', notes:''
+    });
+  });
+
+  // If no budget at all, save 1 placeholder entry
+  if(toSave.length===0){
+    toSave.push({
+      date:today, category:CATS[0],
+      po, currency:'VND', exchangeRate:25000,
+      budget:0, budgetY1:0, budgetY2:0, budgetY3:0, budgetY4:0, budgetY5:0,
+      amount:0, amountVND:0,
+      sale, channelPartner:partner, endUser,
+      startDate, endDate, contractStatus:status,
+      description:'', vendor:'', notes:''
+    });
+  }
+
+  // Save to memory
+  toSave.forEach(e=>{
+    const newE=normalizeEntry({...e,
+      ID:'local_'+Date.now()+'_'+Math.random(),
+      Date:e.date, Category:e.category, PO_Ref:e.po,
+      Currency:e.currency, ExchangeRate:e.exchangeRate,
+      Budget:e.budget, BudgetY1:e.budgetY1, BudgetY2:e.budgetY2,
+      BudgetY3:e.budgetY3, BudgetY4:e.budgetY4, BudgetY5:e.budgetY5,
+      Amount:e.amount, AmountVND:e.amountVND,
+      Sale:e.sale, ChannelPartner:e.channelPartner, EndUser:e.endUser,
+      StartDate:e.startDate, EndDate:e.endDate,
+      ContractStatus:e.contractStatus, Notes:'', Description:'', Vendor:''
+    });
+    entries.push(newE);
+  });
+
+  tr.remove();
+  renderContracts();
+
+  // Save to Sheets
+  if(SCRIPT_URL){
+    try{
+      await Promise.all(toSave.map(e=>api({action:'addEntry', entry:e})));
+      toast(`Contract saved (${toSave.length} categories) ✓`,'success');
+      // Refresh to get real IDs from Sheets
+      setTimeout(refreshAll, 1500);
+    }catch(err){
+      toast('Save error: '+err.message,'error');
+    }
+  } else {
+    toast('Saved locally ✓','success');
+  }
+}
 let editingPO = null;
 
 function openEditContract(po){
