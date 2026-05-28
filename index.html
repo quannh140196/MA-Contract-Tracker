@@ -297,14 +297,17 @@ function setSyncState(state, txt){
 
 // ── API CALLS ──────────────────────────────────────────────
 async function api(body){
-  const r = await fetch(SCRIPT_URL, {
-    method:'POST',
-    body: JSON.stringify(body)
-  });
+  // Use GET + URL params — avoids CORS preflight/redirect issues with Apps Script
+  const url = SCRIPT_URL + '?data=' + encodeURIComponent(JSON.stringify(body));
+  const r = await fetch(url);
   const text = await r.text();
-  const d = JSON.parse(text);
-  if(d.error) throw new Error(d.error);
-  return d;
+  try {
+    const d = JSON.parse(text);
+    if(d.error) throw new Error(d.error);
+    return d;
+  } catch(e) {
+    throw new Error('Invalid response from server');
+  }
 }
 
 async function refreshAll(){
