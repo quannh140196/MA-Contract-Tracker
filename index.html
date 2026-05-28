@@ -543,19 +543,30 @@ function renderContracts(){
   entries.forEach(e=>{
     const k=e.PO_Ref||e.ID;
     if(!poMap[k]) poMap[k]={
-      po:k, endUser:e.EndUser, partner:e.ChannelPartner, sale:e.Sale,
-      startDate:e.StartDate, endDate:e.EndDate, status:e.ContractStatus,
-      budgets:{}
+      po:k, endUser:'', partner:'', sale:'',
+      startDate:'', endDate:'', status:'Active', budgets:{}
     };
+    // Always update contract info — pick from any entry that has it
+    if(e.EndUser)        poMap[k].endUser   = e.EndUser;
+    if(e.ChannelPartner) poMap[k].partner   = e.ChannelPartner;
+    if(e.Sale)           poMap[k].sale      = e.Sale;
+    if(e.StartDate)      poMap[k].startDate = e.StartDate;
+    if(e.EndDate)        poMap[k].endDate   = e.EndDate;
+    if(e.ContractStatus) poMap[k].status    = e.ContractStatus;
+
     CATS.forEach(cat=>{ if(!poMap[k].budgets[cat]) poMap[k].budgets[cat]=[0,0,0,0,0]; });
     const cat=e.Category;
     if(cat){
-      if(e.BudgetY1>0) poMap[k].budgets[cat][0]+=e.BudgetY1;
-      if(e.BudgetY2>0) poMap[k].budgets[cat][1]+=e.BudgetY2;
-      if(e.BudgetY3>0) poMap[k].budgets[cat][2]+=e.BudgetY3;
-      if(e.BudgetY4>0) poMap[k].budgets[cat][3]+=e.BudgetY4;
-      if(e.BudgetY5>0) poMap[k].budgets[cat][4]+=e.BudgetY5;
-      if(e.Budget>0&&!e.BudgetY1) poMap[k].budgets[cat][0]+=e.Budget;
+      const hasY=e.BudgetY1||e.BudgetY2||e.BudgetY3||e.BudgetY4||e.BudgetY5;
+      if(hasY){
+        if(e.BudgetY1>0) poMap[k].budgets[cat][0]+=e.BudgetY1;
+        if(e.BudgetY2>0) poMap[k].budgets[cat][1]+=e.BudgetY2;
+        if(e.BudgetY3>0) poMap[k].budgets[cat][2]+=e.BudgetY3;
+        if(e.BudgetY4>0) poMap[k].budgets[cat][3]+=e.BudgetY4;
+        if(e.BudgetY5>0) poMap[k].budgets[cat][4]+=e.BudgetY5;
+      } else if(e.Budget>0){
+        poMap[k].budgets[cat][0]+=e.Budget; // legacy fallback → Y1
+      }
     }
   });
 
@@ -1094,10 +1105,12 @@ function openEditContract(po){
   grp.forEach(e=>{
     const cat=e.Category;
     if(!cat) return;
-    [e.BudgetY1,e.BudgetY2,e.BudgetY3,e.BudgetY4,e.BudgetY5].forEach((v,i)=>{
-      if(v>0) budgets[cat][i]+=v;
-    });
-    if(!(e.BudgetY1||e.BudgetY2)&&e.Budget>0) budgets[cat][0]+=e.Budget;
+    const hasY=e.BudgetY1||e.BudgetY2||e.BudgetY3||e.BudgetY4||e.BudgetY5;
+    if(hasY){
+      [e.BudgetY1,e.BudgetY2,e.BudgetY3,e.BudgetY4,e.BudgetY5].forEach((v,i)=>{ if(v>0) budgets[cat][i]+=v; });
+    } else if(e.Budget>0){
+      budgets[cat][0]+=e.Budget; // legacy → Y1
+    }
   });
   const months = contractMonths(rep.StartDate||'', rep.EndDate||'');
   const yrs    = Math.max(1,Math.min(5,Math.round(months/12)));
