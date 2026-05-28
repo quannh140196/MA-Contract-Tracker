@@ -702,8 +702,8 @@ function addContractRowWithData(data={}){
     </select></td>
     <td><div class="cell muted" id="months_${id}" style="text-align:center">${data.startDate&&data.endDate?contractMonths(data.startDate,data.endDate):'—'}</div></td>
     ${budCols}
-    <td style="padding:4px 8px;white-space:nowrap;display:flex;gap:4px">
-      <button class="btn-primary" style="font-size:11px;padding:4px 10px" onclick="saveNewContract('${id}')">💾 Save</button>
+    <td style="padding:4px 8px;white-space:nowrap">
+      <button class="btn-primary" style="font-size:11px;padding:4px 10px;margin-right:4px" onclick="saveNewContract('${id}')">💾 Save</button>
       <button class="btn-danger" onclick="this.closest('tr').remove()">✕</button>
     </td>
   `;
