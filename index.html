@@ -298,10 +298,11 @@ function setSyncState(state, txt){
 // ── API CALLS ──────────────────────────────────────────────
 async function api(body){
   const r = await fetch(SCRIPT_URL, {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST',
     body: JSON.stringify(body)
   });
-  const d = await r.json();
+  const text = await r.text();
+  const d = JSON.parse(text);
   if(d.error) throw new Error(d.error);
   return d;
 }
